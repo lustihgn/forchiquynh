@@ -804,11 +804,29 @@ function trackPerf(delta){
   perfAcc+=delta;
   if(++perfFrames<30)return;
   const avg=perfAcc/perfFrames;perfAcc=0;perfFrames=0;
-  if(avg>22&&quality>0){quality--;applyQuality();perfWarmup=20}
+  // Không tự hạ chất lượng giữa chừng nữa: việc đổi số hạt vành đai làm hình bị 'nhảy' và có thể khoá 30fps.
 }
 
 /* ---- Vòng lặp chính ---- */
 let skipFlip=0;
+/* Bấm lần đầu: bật nhạc và hiện gợn sóng ngay; chỉ bắt đầu thu nhỏ trái tim sau khi nhạc đã chạy
+   (lúc trình duyệt giải mã nhạc có thể khựng 1 nhịp, để nó xảy ra khi hình còn đứng yên nên không thấy). */
+let transitionArmed=false;
+function beginTransition(){
+  if(transitionArmed)return;transitionArmed=true;
+  let done=false;
+  const go=()=>{
+    if(done)return;done=true;
+    music.removeEventListener("playing",onPlaying);
+    greetingDismissTime=animClock;transClock=0;resetPerf(45);
+  };
+  const onPlaying=()=>setTimeout(go,90);
+  music.addEventListener("playing",onPlaying);
+  if(!music.paused&&music.currentTime>0)setTimeout(go,120);
+  setTimeout(go,700);
+}
+const DEBUG=location.hash==="#debug";let dbgEl=null,dbgN=0,dbgT=0,dbgMax=0;
+if(DEBUG){dbgEl=document.createElement("div");dbgEl.style.cssText="position:fixed;left:6px;top:6px;z-index:9;color:#0f0;font:12px monospace;pointer-events:none;white-space:pre";document.body.appendChild(dbgEl)}
 function draw(time){
   requestAnimationFrame(draw);
   if(modalOpen){lastFrameTime=0;return}   // thẻ đang mở, nền bị làm mờ: không cần vẽ lại
@@ -817,6 +835,7 @@ function draw(time){
   if(lastFrameTime===0)lastFrameTime=time;
   const rawDelta=time-lastFrameTime;lastFrameTime=time;
   trackPerf(rawDelta);
+  if(DEBUG){dbgN++;dbgT+=rawDelta;if(rawDelta>dbgMax)dbgMax=rawDelta;if(dbgT>=500){dbgEl.textContent=Math.round(dbgN*1000/dbgT)+" fps | max "+Math.round(dbgMax)+" ms";dbgN=dbgT=dbgMax=0}}
   dtS+=(Math.min(50,rawDelta)-dtS)*.12;
   const sec=dtS/1000,fScale=dtS/16.667;
   if(animationStartTime===null)animationStartTime=time;
@@ -962,10 +981,12 @@ canvas.addEventListener("pointerup",e=>{
   if(!dragPointer||dragPointer.id!==e.pointerId)return;
   if(performance.now()-dragPointer.startTime>250)dragPointer.moved=true;
   if(!dragPointer.moved){
-    if(greetingDismissTime===null)greetingDismissTime=animClock;
     if(transitionStartTime===null){
-      transitionStartTime=performance.now();transClock=0;
-      resetPerf(45);   // tránh hạ chất lượng nhầm ngay khung hình đầu tiên của chuyển cảnh
+      transitionStartTime=performance.now();
+      const r0=canvas.getBoundingClientRect();
+      ripples.push({x:e.clientX-r0.left,y:e.clientY-r0.top,age:0,life:900});
+      startMusic();
+      beginTransition();
     }else{
       const rect=canvas.getBoundingClientRect();
       const px=e.clientX-rect.left,py=e.clientY-rect.top;
