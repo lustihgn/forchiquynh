@@ -10,8 +10,8 @@
 <style>
 :root{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000208}
-canvas{display:block;width:100%;height:100%;touch-action:none;filter:brightness(1.08)}
-.greeting-label{position:fixed;z-index:1;left:0;top:0;opacity:0;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:"Dancing Script","Segoe Script","Brush Script MT",cursive;font-weight:700;font-style:normal;will-change:transform,opacity,filter}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.greeting-label{position:fixed;z-index:1;left:0;top:0;opacity:0;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;font-family:"Dancing Script","Segoe Script","Brush Script MT",cursive;font-weight:700;font-style:normal;will-change:transform,opacity;contain:layout style}
  .gl-base{display:block;color:#eadcff;background:linear-gradient(110deg,#f2eaff 8%,#d3a0ff 42%,#a894ff 68%,#9180ff 92%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:.45px rgba(231,215,255,.8);text-shadow:0 0 7px rgba(211,151,255,.78),0 0 17px rgba(145,128,255,.62);text-rendering:optimizeLegibility}
 .gl-shine{position:absolute;left:0;top:0;display:block;color:transparent;-webkit-text-fill-color:transparent;background-image:linear-gradient(105deg,rgba(255,255,255,0) 40%,rgba(255,255,255,.95) 50%,rgba(255,255,255,0) 60%);background-size:300% 100%;background-repeat:no-repeat;background-position:100% 0;-webkit-background-clip:text;background-clip:text;opacity:0}
 .wish-modal{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:22px;background:rgba(2,5,20,.72);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .35s cubic-bezier(.22,.8,.24,1),visibility .35s}
@@ -61,20 +61,13 @@ canvas{display:block;width:100%;height:100%;touch-action:none;filter:brightness(
 <script>
 const canvas=document.getElementById("heartCanvas"),ctx=canvas.getContext("2d",{alpha:false});
 const SCRIPT_FONT='"Dancing Script","Segoe Script","Snell Roundhand","Brush Script MT",cursive';
-/* Tạo sẵn sprite chữ lời chúc từ lúc đầu (rải đều theo thời gian rảnh) để không bị khựng khi quả cầu hiện ra */
-function prebakeWishes(){
-  const list=sphereDecorations.filter(d=>d.wish).map(d=>d.wish);
-  let i=0;
-  const step=()=>{
-    if(i>=list.length)return;
-    wishSprite(list[i++]);
-    if(window.requestIdleCallback)requestIdleCallback(step,{timeout:300});else setTimeout(step,24);
-  };
-  step();
-}
-const rebakeWishes=()=>{wishSprites.clear();prebakeWishes()};
-if(document.fonts&&document.fonts.load)document.fonts.load('600 40px "Dancing Script"').then(rebakeWishes).catch(rebakeWishes);
-else window.addEventListener("load",rebakeWishes);
+/* Tạo sprite chữ lời chúc dần dần, mỗi khung hình 1 cái, để không bị khựng */
+let bakeQueue=[],spriteBudget=0;
+const queueBake=()=>{bakeQueue=sphereDecorations.filter(d=>d.wish).map(d=>d.wish)};
+const bakeTimer=setTimeout(queueBake,2500);
+const onFont=()=>{clearTimeout(bakeTimer);queueBake()};
+if(document.fonts&&document.fonts.load)document.fonts.load('600 40px "Dancing Script"').then(onFont).catch(onFont);
+else window.addEventListener("load",onFont);
 
 /* ---- Nhạc: iOS chỉ chấp nhận play() trong touchend/click ---- */
 const music=document.getElementById("backgroundMusic");
@@ -124,7 +117,7 @@ const projectedStars=stars.map(star=>({star,x:0,y:0,radius:0,a:0,depth:1}));
 
 const sphereWishes=["Luôn hạnh phúc","Mãi yêu thương","Bình an nhé","Luôn mỉm cười","May mắn mỗi ngày","Mãi bên nhau","Tràn đầy niềm vui","Yêu bạn nhiều","Mọi điều như ý","Ngọt ngào nhé","Thật nhiều yêu thương","Hạnh phúc dài lâu","Luôn rạng rỡ","Ước mơ thành hiện thực","Ấm áp mỗi ngày","Thương thật nhiều","Một đời bình yên","Niềm vui bất tận","Luôn được chở che","Mãi lung linh","Ngày mới thật vui","Luôn gặp điều tốt lành","Tự tin tỏa sáng","Bình yên trong tim","Mong bạn luôn được yêu","Nụ cười luôn nở","Ước mơ bay cao","Hạnh phúc quanh đây","Tỏa sáng theo cách riêng","Thành công rực rỡ","Mỗi ngày một niềm vui","Luôn vững tin nhé","Thật nhiều may mắn","Yêu đời và an yên","Mong điều lành ghé thăm","Rạng rỡ mỗi ngày","Luôn có người bên cạnh","Trái tim ngập nắng","Vạn điều như ý","Hạnh phúc nhé bạn","Luôn dịu dàng với mình","Thành công trên con đường bạn chọn","Mong nắng luôn ở trong tim","Hãy cứ là chính bạn","Bình yên sẽ tìm đến","Thêm một ngày thật đáng yêu","Mọi nỗ lực đều xứng đáng","Luôn được yêu thương","Rực rỡ theo cách riêng","Niềm vui ở quanh đây","Chúc bạn luôn an nhiên","Cùng nhau tạo kỷ niệm đẹp","Tương lai thật tươi sáng","Luôn tin vào điều kỳ diệu","Bạn xứng đáng với điều tốt nhất","Hạnh phúc từ những điều nhỏ","Mong ước mơ hóa thành sự thật","Mỗi ngày đều có phép màu","Trái tim luôn đầy hy vọng","Cười thật tươi nhé"];
 // Lời nhắn theo đúng thứ tự sphereWishes; sửa từng dòng để cá nhân hóa từng lời chúc.
-const wishMessages=["Chúc bạn luôn tìm thấy niềm vui trong những điều giản dị mỗi ngày.","Mong tình yêu thương luôn ở bên và sưởi ấm trái tim bạn.","Chúc tâm hồn bạn luôn bình yên, dù ngoài kia có bao điều bận rộn.","Mong nụ cười luôn nở trên môi và lan tỏa đến mọi người quanh bạn.","Chúc may mắn gõ cửa bạn mỗi ngày, trong cả những điều nhỏ bé.","Mong chúng ta luôn đồng hành và cùng nhau tạo nên nhiều kỷ niệm đẹp.","Chúc ngày nào của bạn cũng có lý do để vui và mỉm cười.","Bạn luôn là người đặc biệt; mong bạn cảm nhận được tình cảm chân thành này.","Chúc mọi điều bạn mong đợi đều đến vào thời điểm thật đẹp.","Mong cuộc sống của bạn luôn dịu dàng và ngọt ngào như một giấc mơ.","Chúc bạn nhận được thật nhiều yêu thương, hôm nay và cả những ngày sau.","Mong hạnh phúc ở lại thật lâu trong từng khoảnh khắc của bạn.","Chúc bạn tự tin tỏa sáng và luôn tự hào về chính mình.","Mong những ước mơ bạn ấp ủ sớm trở thành hiện thực.","Chúc trái tim bạn luôn ấm áp và được bao quanh bởi những điều tử tế.","Gửi đến bạn thật nhiều thương mến, hôm nay và mỗi ngày.","Mong bạn luôn có một chốn bình yên để trở về và nghỉ ngơi.","Chúc niềm vui của bạn cứ đầy lên, không vơi đi theo năm tháng.","Mong bạn luôn được yêu thương, bảo vệ và trân trọng.","Chúc vẻ rạng rỡ trong bạn luôn lấp lánh theo cách riêng.","Mong hôm nay mở ra thật nhiều điều vui vẻ và đáng nhớ.","Chúc những điều tốt lành luôn tìm được đường đến với bạn.","Hãy tin vào bản thân nhé — bạn có thể làm được nhiều điều tuyệt vời.","Mong bình yên luôn ở trong tim bạn, dù bạn đang ở bất cứ đâu.","Bạn xứng đáng được yêu thương thật nhiều, đừng bao giờ quên điều đó.","Chúc nụ cười của bạn luôn sáng và làm ngày của mọi người đẹp hơn.","Mong ước mơ của bạn bay cao và đưa bạn đến những chân trời mới.","Chúc niềm hạnh phúc luôn ở thật gần, trong từng điều nhỏ quanh bạn.","Hãy cứ tỏa sáng theo cách của riêng mình — bạn thật đặc biệt.","Chúc mọi cố gắng của bạn dẫn đến thành công như mong đợi.","Mong mỗi ngày đều mang đến cho bạn một niềm vui mới.","Dù gặp thử thách nào, mong bạn luôn vững tin vào chính mình.","Chúc vận may và những cơ hội tốt đẹp luôn đồng hành cùng bạn.","Mong bạn luôn yêu đời, nhẹ lòng và an yên với hiện tại.","Chúc hôm nay có một điều lành bất ngờ khiến bạn mỉm cười.","Mong bạn ngày càng rạng rỡ và tự tin với con người mình.","Chúc bên cạnh bạn luôn có những người chân thành và yêu quý bạn.","Mong trái tim bạn luôn ngập nắng, kể cả trong những ngày nhiều mây.","Chúc những mong ước đẹp đẽ của bạn đều thành sự thật.","Mong bạn luôn hạnh phúc và biết rằng mình rất đáng quý.","Hãy dịu dàng với bản thân nhé; bạn cũng xứng đáng được chăm sóc.","Chúc con đường bạn chọn luôn có cơ hội tốt và những người đồng hành.","Mong trong tim bạn lúc nào cũng có ánh nắng và niềm hy vọng.","Bạn không cần giống ai cả — chính bạn đã rất tuyệt vời rồi.","Mong bình yên nhẹ nhàng tìm đến và ở lại thật lâu bên bạn.","Chúc hôm nay đem đến một khoảnh khắc đáng yêu để bạn nhớ mãi.","Mọi nỗ lực của bạn đều đáng trân trọng; mong thành quả sớm đến.","Mong bạn luôn được lắng nghe, thấu hiểu và yêu thương chân thành.","Hãy tiếp tục rực rỡ nhé, vì thế giới đẹp hơn khi có bạn.","Chúc niềm vui luôn hiện diện trong những điều bình thường quanh bạn.","Mong bạn sống thật an nhiên, nhẹ nhàng và bình yên trong lòng.","Chúc chúng ta còn có thật nhiều dịp vui để cùng nhau lưu giữ kỷ niệm.","Mong tương lai mở ra trước mắt bạn thật nhiều cơ hội tươi sáng.","Hãy tin vào điều kỳ diệu — đôi khi điều đẹp nhất đến thật bất ngờ.","Bạn xứng đáng nhận được những điều tốt đẹp và chân thành nhất.","Mong bạn biết trân quý những niềm vui nhỏ đang có mỗi ngày.","Chúc điều bạn ước mong hôm nay sớm hóa thành một điều có thật.","Mong mỗi ngày đều có một phép màu nhỏ làm lòng bạn vui hơn.","Hãy giữ hy vọng trong tim nhé; những ngày tốt đẹp vẫn đang đến.","Cười thật tươi nhé — nụ cười của bạn đáng yêu hơn bạn nghĩ."];;
+const wishMessages=["Chúc bạn luôn tìm thấy niềm vui trong những điều giản dị mỗi ngày.","Mong tình yêu thương luôn ở bên và sưởi ấm trái tim bạn.","Chúc tâm hồn bạn luôn bình yên, dù ngoài kia có bao điều bận rộn.","Mong nụ cười luôn nở trên môi và lan tỏa đến mọi người quanh bạn.","Chúc may mắn gõ cửa bạn mỗi ngày, trong cả những điều nhỏ bé.","Mong chúng ta luôn đồng hành và cùng nhau tạo nên nhiều kỷ niệm đẹp.","Chúc ngày nào của bạn cũng có lý do để vui và mỉm cười.","Bạn luôn là người đặc biệt; mong bạn cảm nhận được tình cảm chân thành này.","Chúc mọi điều bạn mong đợi đều đến vào thời điểm thật đẹp.","Mong cuộc sống của bạn luôn dịu dàng và ngọt ngào như một giấc mơ.","Chúc bạn nhận được thật nhiều yêu thương, hôm nay và cả những ngày sau.","Mong hạnh phúc ở lại thật lâu trong từng khoảnh khắc của bạn.","Chúc bạn tự tin tỏa sáng và luôn tự hào về chính mình.","Mong những ước mơ bạn ấp ủ sớm trở thành hiện thực.","Chúc trái tim bạn luôn ấm áp và được bao quanh bởi những điều tử tế.","Gửi đến bạn thật nhiều thương mến, hôm nay và mỗi ngày.","Mong bạn luôn có một chốn bình yên để trở về và nghỉ ngơi.","Chúc niềm vui của bạn cứ đầy lên, không vơi đi theo năm tháng.","Mong bạn luôn được yêu thương, bảo vệ và trân trọng.","Chúc vẻ rạng rỡ trong bạn luôn lấp lánh theo cách riêng.","Mong hôm nay mở ra thật nhiều điều vui vẻ và đáng nhớ.","Chúc những điều tốt lành luôn tìm được đường đến với bạn.","Hãy tin vào bản thân nhé — bạn có thể làm được nhiều điều tuyệt vời.","Mong bình yên luôn ở trong tim bạn, dù bạn đang ở bất cứ đâu.","Bạn xứng đáng được yêu thương thật nhiều, đừng bao giờ quên điều đó.","Chúc nụ cười của bạn luôn sáng và làm ngày của mọi người đẹp hơn.","Mong ước mơ của bạn bay cao và đưa bạn đến những chân trời mới.","Chúc niềm hạnh phúc luôn ở thật gần, trong từng điều nhỏ quanh bạn.","Hãy cứ tỏa sáng theo cách của riêng mình — bạn thật đặc biệt.","Chúc mọi cố gắng của bạn dẫn đến thành công như mong đợi.","Mong mỗi ngày đều mang đến cho bạn một niềm vui mới.","Dù gặp thử thách nào, mong bạn luôn vững tin vào chính mình.","Chúc vận may và những cơ hội tốt đẹp luôn đồng hành cùng bạn.","Mong bạn luôn yêu đời, nhẹ lòng và an yên với hiện tại.","Chúc hôm nay có một điều lành bất ngờ khiến bạn mỉm cười.","Mong bạn ngày càng rạng rỡ và tự tin với con người mình.","Chúc bên cạnh bạn luôn có những người chân thành và yêu quý bạn.","Mong trái tim bạn luôn ngập nắng, kể cả trong những ngày nhiều mây.","Chúc những mong ước đẹp đẽ của bạn đều thành sự thật.","Mong bạn luôn hạnh phúc và biết rằng mình rất đáng quý.","Hãy dịu dàng với bản thân nhé; bạn cũng xứng đáng được chăm sóc.","Chúc con đường bạn chọn luôn có cơ hội tốt và những người đồng hành.","Mong trong tim bạn lúc nào cũng có ánh nắng và niềm hy vọng.","Bạn không cần giống ai cả — chính bạn đã rất tuyệt vời rồi.","Mong bình yên nhẹ nhàng tìm đến và ở lại thật lâu bên bạn.","Chúc hôm nay đem đến một khoảnh khắc đáng yêu để bạn nhớ mãi.","Mọi nỗ lực của bạn đều đáng trân trọng; mong thành quả sớm đến.","Mong bạn luôn được lắng nghe, thấu hiểu và yêu thương chân thành.","Hãy tiếp tục rực rỡ nhé, vì thế giới đẹp hơn khi có bạn.","Chúc niềm vui luôn hiện diện trong những điều bình thường quanh bạn.","Mong bạn sống thật an nhiên, nhẹ nhàng và bình yên trong lòng.","Chúc chúng ta còn có thật nhiều dịp vui để cùng nhau lưu giữ kỷ niệm.","Mong tương lai mở ra trước mắt bạn thật nhiều cơ hội tươi sáng.","Hãy tin vào điều kỳ diệu — đôi khi điều đẹp nhất đến thật bất ngờ.","Bạn xứng đáng nhận được những điều tốt đẹp và chân thành nhất.","Mong bạn biết trân quý những niềm vui nhỏ đang có mỗi ngày.","Chúc điều bạn ước mong hôm nay sớm hóa thành một điều có thật.","Mong mỗi ngày đều có một phép màu nhỏ làm lòng bạn vui hơn.","Hãy giữ hy vọng trong tim nhé; những ngày tốt đẹp vẫn đang đến.","Cười thật tươi nhé — nụ cười của bạn đáng yêu hơn bạn nghĩ."];
 const SPHERE_RADIUS=72,RING_SQUASH=.2,RING_Y_OFFSET=4;
 const PALETTE={center:[239,205,255],edge:[139,121,255]};
 
@@ -287,6 +280,8 @@ function bakeHeartDeco(){
 function bakeDecor(){
   for(let pal=0;pal<3;pal++)for(let f=0;f<BF_FRAMES;f++)butterflySprites[pal*BF_FRAMES+f]=bakeButterfly(pal,.62+f/(BF_FRAMES-1)*.38);
   starSprite=bakeStar();heartDecoSprite=bakeHeartDeco();
+  // Tạo sẵn các glow sprite để lúc chuyển cảnh không phải tạo thêm
+  [[255,130,220],[220,185,255],[255,66,176],[135,85,255],[190,120,255],...FLOAT_RGB].forEach(c=>glowSprite(c[0],c[1],c[2]));
 }
 /* Vẽ sprite có xoay + co giãn bằng 1 lệnh setTransform (rẻ hơn nhiều so với vẽ lại đường cong mỗi khung) */
 function spriteXf(img,x,y,rot,k,dx,dy,w,h){
@@ -310,10 +305,10 @@ function drawPrettyHeart(x,y,size,time,phase){
 }
 
 /* ---- Sprite chữ lời chúc: vẽ 1 lần vào canvas phụ, mỗi khung chỉ drawImage ---- */
-const wishSprites=new Map(),WS=4;
-function wishSprite(text){
+const wishSprites=new Map(),WS=3;
+function wishSprite(text,force){
   let s=wishSprites.get(text);
-  if(s)return s;
+  if(s&&!force)return s;
   const c=document.createElement("canvas"),x=c.getContext("2d");
   x.font=`600 ${19.8*WS}px ${SCRIPT_FONT}`;
   const pad=14*WS,w=Math.ceil(x.measureText(text).width)+pad*2,h=Math.ceil(19.8*WS*1.5)+pad*2;
@@ -572,11 +567,13 @@ function drawSpherePass(cx,cy,scale,time,backPass,reveal,retreat){
       const depthScale=.88+.62*p.clarity;
       const fs=Math.max(7,Math.min(11,scale*1.5))*.9*sp*depthScale,k=fs/20*1.2*(.7+.3*p.itemVis);
       if(!backPass&&p.clarity>.3&&p.itemVis>.6)wishHitTargets.push({x:p.x,y:p.y,radius:Math.max(fs*2.4,38),wish:item.wish,index:sphereWishes.indexOf(item.wish)});
-      const sprite=wishSprite(item.wish),dw=sprite.w*k,dh=sprite.h*k;
-      ctx.shadowBlur=0;
-      ctx.imageSmoothingQuality="high";
-      ctx.drawImage(sprite.c,p.x-dw/2,p.y-dh/2,dw,dh);
-      ctx.imageSmoothingQuality="low";
+      const sprite=wishSprites.get(item.wish)||(spriteBudget>0?(spriteBudget--,wishSprite(item.wish)):null);
+      if(sprite){
+        const dw=sprite.w*k,dh=sprite.h*k;
+        ctx.shadowBlur=0;ctx.imageSmoothingQuality="medium";
+        ctx.drawImage(sprite.c,p.x-dw/2,p.y-dh/2,dw,dh);
+        ctx.imageSmoothingQuality="low";
+      }
     }else if(item.butterfly){
       const size=Math.max(9,Math.min(13,scale*1.5))*sp*.65*1.15*BUTTERFLY_SCALE*(.6+.4*p.itemVis);
       ctx.globalCompositeOperation="lighter";
@@ -638,64 +635,68 @@ function drawRingPass(g,cx,cy,scale,visible,time,backPass,list){
   g.globalCompositeOperation="source-over";g.globalAlpha=1;
 }
 
-/* Vành đai vẽ vào 2 lớp phụ (nửa sau / nửa trước), chỉ cập nhật ~30 lần/giây (vành đai quay rất chậm);
-   các khung còn lại chỉ drawImage */
-let ringLayers=null,ringCap=0,ringLScale=0,ringLVis=-1,ringLTime=-1e9;
-function ensureRingLayers(ringScale,ringVisible,time){
-  const px=pixelRatio;
-  // Giới hạn vẽ lại lớp vành đai ở khoảng 30 lần/giây để tránh khựng khi bắt đầu thu nhỏ.
-  if(ringLayers&&ringLayers.px===px&&time-ringLTime<33)return;
-  const baseScale=Math.min(width,height)*(width<=600?.038:.0135)*.5*.45;
-  const need=Math.max(Math.ceil(2*54*ringScale),Math.ceil(2*54*baseScale));
-  if(!ringLayers||need>ringCap||ringLayers.px!==px){
-    ringCap=Math.ceil(need*1.2);
-    const mk=()=>{const c=document.createElement("canvas");c.width=Math.ceil(ringCap*px);c.height=Math.ceil(ringCap*px);const g=c.getContext("2d");g.setTransform(px,0,0,px,0,0);return{c,g}};
+/* Vành đai: vẽ vào 2 lớp phụ ở 1 cỡ cố định (ringRS). Lúc vành đai lớn dần / zoom chỉ co giãn ảnh (gần như không tốn),
+   và mỗi khung vẽ lại xen kẽ 1 lớp (nửa sau / nửa trước) để chuyển động quay luôn mượt. */
+let ringLayers=null,ringCapW=0,ringCapH=0,ringTick=0,ringFrame=0,ringRS=0;
+function ensureRingLayers(target,time,force){
+  const px=Math.min(pixelRatio,2);
+  const rebuild=force||!ringLayers||ringLayers.px!==px||target>ringRS*1.25||target<ringRS*.6;
+  if(rebuild){
+    ringRS=target;
+    ringCapW=Math.ceil(2*54*ringRS*1.2);ringCapH=Math.ceil(ringCapW*.5);
+    const mk=()=>{const c=document.createElement("canvas");c.width=Math.ceil(ringCapW*px);c.height=Math.ceil(ringCapH*px);const g=c.getContext("2d");g.setTransform(px,0,0,px,0,0);return{c,g}};
     ringLayers={back:mk(),front:mk(),px};
   }
-  ringLScale=ringScale;ringLVis=ringVisible;ringLTime=time;
   updateRing(outerDraw,time);updateRing(ringDraw,time);
-  const h=ringCap/2;
-  for(const back of[true,false]){
+  const hx=ringCapW/2,hy=ringCapH/2;
+  const passes=rebuild?[true,false]:[(ringTick^=1)===1];
+  for(const back of passes){
     const L=back?ringLayers.back:ringLayers.front;
-    L.g.clearRect(0,0,ringCap,ringCap);
-    drawRingPass(L.g,h,h,ringScale,ringVisible,time,back,outerDraw);
-    drawRingPass(L.g,h,h,ringScale,ringVisible,time,back,ringDraw);
+    L.g.clearRect(0,0,ringCapW,ringCapH);
+    drawRingPass(L.g,hx,hy,ringRS,1,time,back,outerDraw);
+    drawRingPass(L.g,hx,hy,ringRS,1,time,back,ringDraw);
   }
 }
-function drawRingLayer(cx,cy,back){
-  const L=back?ringLayers.back:ringLayers.front;
-  ctx.globalCompositeOperation="lighter";ctx.globalAlpha=back?.72:1;
-  ctx.drawImage(L.c,cx-ringCap/2,cy-ringCap/2,ringCap,ringCap);
+function drawRingLayer(cx,cy,back,ringScale,visible){
+  const k=ringScale/ringRS;
+  if(k<.01||visible<=.002)return;
+  const L=back?ringLayers.back:ringLayers.front,w=ringCapW*k,h=ringCapH*k;
+  ctx.globalCompositeOperation="lighter";ctx.globalAlpha=Math.min(1,(back?.72:1)*visible);
+  ctx.drawImage(L.c,cx-w/2,cy-h/2,w,h);
   ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
 }
 
-/* ---- Lời chúc: blur-in + thu khoảng cách chữ, vệt sáng quét ngang, tự hiện & tự tan theo chu kỳ ---- */
+/* ---- Lời chúc: chỉ dùng opacity + transform (chạy trên GPU), không đổi layout mỗi khung ---- */
 const greetingLabel=document.getElementById("greetingLabel");
 const GREET_TEXT="Happy 20-10";
 greetingLabel.textContent="";
 const glBase=document.createElement("span");glBase.className="gl-base";glBase.textContent=GREET_TEXT;
 const glShine=document.createElement("span");glShine.className="gl-shine";glShine.setAttribute("aria-hidden","true");glShine.textContent=GREET_TEXT;
 greetingLabel.append(glBase,glShine);
+let glKey="",glOp="",glShineOp="";
 function drawGreeting(cx,cy,anchorScale,exitT,buildT,time){
-  const inP=smoother(buildT),outP=smoother(exitT);
-  const vis=inP*(1-outP);
-  const st=greetingLabel.style;
-  if(vis<=.002){st.opacity="0";glShine.style.opacity="0";return}
+  const inP=smoother(buildT),outP=smoother(exitT),vis=inP*(1-outP),st=greetingLabel.style;
+  if(vis<=.002){
+    if(glOp!=="0"){st.opacity=glOp="0";glShine.style.opacity=glShineOp="0"}
+    return;
+  }
   const fs=Math.min(56,Math.max(26,width*.09))*.9*.9;
-  const y=(1-inP)*fs*.35-outP*fs*.6;
-  st.left=`${cx}px`;
-  st.top=`${cy-anchorScale*20-fs*1.6}px`;
-  st.fontSize=`${fs}px`;
-  st.letterSpacing=`${(1-inP)*.3+outP*.25}em`;
-  st.opacity=vis;
-  st.transform=`translate(-50%,-50%) translate3d(0,${y}px,0)`;
-  st.filter="none";
+  const key=cx+"|"+cy+"|"+anchorScale+"|"+fs;
+  if(key!==glKey){
+    glKey=key;
+    st.left=`${cx}px`;st.top=`${cy-anchorScale*20-fs*1.6}px`;
+    st.fontSize=`${fs}px`;st.letterSpacing="0";
+  }
+  const op=vis.toFixed(3);
+  if(op!==glOp){st.opacity=op;glOp=op}
+  const y=(1-inP)*fs*.35-outP*fs*.6,sc=.94+.06*inP+.06*outP;
+  st.transform=`translate(-50%,-50%) translate3d(0,${y.toFixed(2)}px,0) scale(${sc.toFixed(4)})`;
   // vệt sáng: chỉ chạy khi chữ đã hiện đủ, cứ ~5 giây quét 1 lần từ trái sang phải
   const q=((time%5200)/1500);
-  if(inP>.98&&outP<.05&&q<1){
-    glShine.style.opacity="1";
+  if(inP>.98&&outP<.01&&q<1){
+    glShine.style.opacity="1";glShineOp="1";
     glShine.style.backgroundPosition=`${(1-smoother(q))*100}% 0`;
-  }else glShine.style.opacity="0";
+  }else if(glShineOp!=="0"){glShine.style.opacity="0";glShineOp="0"}
 }
 
 /* ---- Hiệu ứng nâng cao ---- */
@@ -785,7 +786,7 @@ function applyQuality(){
 function resize(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   if(!w||!h)return;
-  const maxDpr=3;   // độ phân giải cao đồng đều trên mọi thiết bị
+  const maxDpr=2;   // giới hạn độ phân giải để đỡ nặng GPU
   pixelRatio=Math.min(Math.max(window.devicePixelRatio||1,2),maxDpr);
   const bw=Math.round(w*pixelRatio),bh=Math.round(h*pixelRatio);
   if(w===width&&h===height&&bw===canvas.width&&bh===canvas.height)return;
@@ -819,6 +820,8 @@ function draw(time){
   dtS+=(Math.min(50,rawDelta)-dtS)*.12;
   const sec=dtS/1000,fScale=dtS/16.667;
   if(animationStartTime===null)animationStartTime=time;
+  spriteBudget=1;
+  if(bakeQueue.length)wishSprite(bakeQueue.pop(),true);
   animClock+=dtS;if(transClock>=0)transClock+=dtS;
   const sinceStart=animClock;
 
@@ -833,7 +836,7 @@ function draw(time){
   const formBuild=Math.min(1.2,sinceStart/4200);
   // Chữ hiện một lần sau 4.2 giây, giữ nguyên đến khi người xem chạm/click màn hình.
   const greetBuild=clamp01((sinceStart-4200)/3200);
-  const greetOut=greetingDismissTime===null?0:smoother((sinceStart-greetingDismissTime)/900);
+  const greetOut=greetingDismissTime===null?0:smoother((sinceStart-greetingDismissTime)/1100);
 
   sphereSpinAngle+=.088*sec;
   sphereZoom+=(targetSphereZoom-sphereZoom)*(1-Math.exp(-7*sec));
@@ -868,8 +871,8 @@ function draw(time){
   if(ringVisible>0){
     updateSpin();
     drawSpherePass(cx,cy,sphereScale,time,true,revealT,retreat);
-    ensureRingLayers(ringScale,ringVisible,time);
-    drawRingLayer(cx,cy,true);
+    ensureRingLayers(scale*sphereZoom,time,false);
+    drawRingLayer(cx,cy,true,ringScale,ringVisible);
   }
   ctx.globalCompositeOperation="lighter";
   const pn=Math.min(particles.length,pLimit),forming=formBuild<1.2;
@@ -909,7 +912,7 @@ function draw(time){
   }
   ctx.globalCompositeOperation="source-over";
   if(ringVisible>0){
-    drawRingLayer(cx,cy,false);
+    drawRingLayer(cx,cy,false,ringScale,ringVisible);
     drawSpherePass(cx,cy,sphereScale,time,false,revealT,retreat);
   }
   drawFx(sec,time,cx,cy,heartScale,visible,grow);
@@ -962,7 +965,7 @@ canvas.addEventListener("pointerup",e=>{
     if(greetingDismissTime===null)greetingDismissTime=animClock;
     if(transitionStartTime===null){
       transitionStartTime=performance.now();transClock=0;
-      resetPerf(25);   // nhanh chóng đo và hạ tải hiệu ứng phụ nếu thiết bị chậm
+      resetPerf(45);   // tránh hạ chất lượng nhầm ngay khung hình đầu tiên của chuyển cảnh
     }else{
       const rect=canvas.getBoundingClientRect();
       const px=e.clientX-rect.left,py=e.clientY-rect.top;
@@ -1007,7 +1010,7 @@ rebuildRingOrder();bakeDecor();
 const warmRingLayers=()=>{
   if(!width||!height)return;
   const baseScale=Math.min(width,height)*(width<=600?.038:.0135)*.5*.45;
-  ensureRingLayers(baseScale,1,performance.now());
+  ensureRingLayers(baseScale,performance.now(),true);
 };
 if(window.requestIdleCallback)requestIdleCallback(warmRingLayers,{timeout:1200});
 else setTimeout(warmRingLayers,300);
