@@ -87,7 +87,8 @@ function startMusic(){
     })();
   }).catch(()=>{musicStarting=false});
 }
-["pointerdown","pointerup","touchend","click","keydown"].forEach(e=>document.addEventListener(e,startMusic,{passive:true}));
+// Chỉ gọi play() trong lần chạm/click thực sự bắt đầu hiệu ứng, không gọi khi kéo hoặc nhấn phím.
+
 
 let seed=20241020;
 function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
@@ -787,7 +788,7 @@ function resize(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   if(!w||!h)return;
   const maxDpr=2;   // giới hạn độ phân giải để đỡ nặng GPU
-  pixelRatio=Math.min(Math.max(window.devicePixelRatio||1,2),maxDpr);
+  pixelRatio=Math.min(window.devicePixelRatio||1,maxDpr);
   const bw=Math.round(w*pixelRatio),bh=Math.round(h*pixelRatio);
   if(w===width&&h===height&&bw===canvas.width&&bh===canvas.height)return;
   width=w;height=h;
@@ -895,6 +896,8 @@ function draw(time){
   }
   ctx.globalCompositeOperation="lighter";
   const pn=Math.min(particles.length,pLimit),forming=formBuild<1.2;
+  const scatter=smoother(retreat),particleFade=1,spread=heartScale*.1*scatter;
+  const minParticleRadius=.62*(1-.55*retreat);
   let lastFill=null;   // chỉ gán fillStyle khi màu đổi (hạt đã sắp theo màu)
   for(let i=0;i<pn;i++){
     const p=particles[i];
@@ -912,14 +915,11 @@ function draw(time){
         arrive=smoother(s*1.8);sizeK=.55+.45*smooth(s);
       }
     }
-    const scatter=smoother(retreat);
-    const particleFade=1;
     const centerDim=1-.72*smooth(1-Math.abs(x)/5)*smooth(1-Math.abs(y+1)/8);
     const al=Math.min(1,(p.opacity+sparkle+twinkle*.18)*visible*arrive*.52*particleFade*centerDim);
     ctx.globalAlpha=al;
-    const spread=heartScale*.1*scatter,dir=Math.hypot(x,y)||1;
+    const dir=Math.hypot(x,y)||1;
     const px=cx+(x+x*pulseExtra)*heartScale+chX+x/dir*spread,py=cy+(y+y*pulseExtra)*heartScale+chY+y/dir*spread;
-    const minParticleRadius=.62*(1-.55*retreat);
     const pr=Math.max(minParticleRadius,p.radius*heartScale/HEART_SIZE*sizeK*(1+twinkle*.35));
     if(pr<.95){if(p.color!==lastFill){ctx.fillStyle=p.color;lastFill=p.color}ctx.fillRect(px-pr,py-pr,pr*2,pr*2)}
     else{const dd=pr*2.8;ctx.drawImage(heartSprites[p.si],px-dd/2,py-dd/2,dd,dd)}
@@ -983,8 +983,6 @@ canvas.addEventListener("pointerup",e=>{
   if(!dragPointer.moved){
     if(transitionStartTime===null){
       transitionStartTime=performance.now();
-      const r0=canvas.getBoundingClientRect();
-      ripples.push({x:e.clientX-r0.left,y:e.clientY-r0.top,age:0,life:900});
       startMusic();
       beginTransition();
     }else{
