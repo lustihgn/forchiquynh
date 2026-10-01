@@ -19,10 +19,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none;filter:brightness(
  .wish-card{position:relative;width:min(360px,100%);max-height:calc(100dvh - 44px);overflow-y:auto;border:1px solid rgba(255,177,224,.58);border-radius:26px;color:#fff2fa;text-align:center;background:radial-gradient(ellipse at 50% 0,rgba(168,111,213,.2),transparent 48%),linear-gradient(155deg,#291943,#10152d 68%,#281332);box-shadow:inset 0 0 0 3px rgba(255,255,255,.025),inset 0 0 32px rgba(201,133,255,.08),0 18px 70px rgba(255,66,176,.3);opacity:0;transform:translateY(22px) scale(.94);transition:transform .5s cubic-bezier(.22,1,.36,1),opacity .35s ease;will-change:transform,opacity}
 .wish-card::before{position:absolute;inset:6px;border:1px solid rgba(235,196,255,.14);border-radius:20px;content:"";pointer-events:none}
 .wish-modal.open .wish-card{opacity:1;transform:none}
- .memory-frame{position:relative;display:grid;width:min(320px,calc(100% - 36px));aspect-ratio:4/3;height:auto;margin:18px auto 0;place-items:center;box-sizing:border-box;overflow:hidden;padding:5px;border:1px solid rgba(255,190,226,.42);border-radius:17px;background:rgba(20,13,38,.55);box-shadow:0 8px 24px rgba(0,0,0,.24)}
+ .memory-frame{position:relative;display:grid;width:min(320px,calc(100% - 36px));height:auto;aspect-ratio:auto;margin:18px auto 0;place-items:center;box-sizing:border-box;overflow:hidden;padding:5px;border:1px solid rgba(255,190,226,.42);border-radius:17px;background:rgba(20,13,38,.55);box-shadow:0 8px 24px rgba(0,0,0,.24)}
 .memory-frame::before{display:none}
 .memory-frame.no-photo{display:none}
-.memory-image{position:relative;z-index:1;display:block;width:100%;height:100%;max-width:100%;max-height:min(calc(60dvh - 16px),464px);box-sizing:border-box;object-fit:contain;object-position:center;filter:none;opacity:1;border:0;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.24)}
+.memory-image{position:relative;z-index:1;display:block;width:100%;height:100%;max-width:100%;max-height:100%;box-sizing:border-box;object-fit:contain;object-position:center;filter:none;opacity:1;border:0;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.24)}
 .wish-content{position:relative;z-index:1}
 .memory-nav{position:absolute;top:50%;display:grid;width:36px;height:36px;place-items:center;transform:translateY(-50%);border:1px solid rgba(255,255,255,.5);border-radius:50%;color:#fff;background:rgba(12,8,31,.7);font:24px/1 Arial,sans-serif;cursor:pointer}
 .memory-nav:hover{background:rgba(12,8,31,.95)}
@@ -94,7 +94,7 @@ function startMusic(){
     })();
   }).catch(()=>{musicStarting=false});
 }
-["pointerup","touchend","click","keydown"].forEach(e=>document.addEventListener(e,startMusic,{passive:true}));
+["pointerdown","pointerup","touchend","click","keydown"].forEach(e=>document.addEventListener(e,startMusic,{passive:true}));
 
 let seed=20241020;
 function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
@@ -140,6 +140,15 @@ const preloadedMemoryImages=Array.from({length:imageCount},(_,i)=>{
 let imageRequestId=0,modalOpen=false,nextMemoryPhotoIndex=0;
 let memoryImagesReady=false,settledMemoryImages=0;
 const settledMemoryImageSet=new WeakSet();
+function fitMemoryFrame(image,source){
+  const ratio=source.naturalWidth/source.naturalHeight;
+  const maxWidth=Math.max(100,Math.min(320,memoryFrame.parentElement.clientWidth-36));
+  const maxHeight=Math.max(100,Math.min(window.innerHeight*.6-16,464));
+  const width=Math.min(maxWidth,maxHeight*ratio);
+  const height=width/ratio;
+  memoryFrame.style.width=`${width}px`;
+  memoryFrame.style.height=`${height}px`;
+}
 function showNextMemoryPhoto(){
   const available=preloadedMemoryImages.map((image,index)=>({image,index})).filter(entry=>entry.image.naturalWidth>0);
   memoryFrame.replaceChildren();
@@ -150,6 +159,7 @@ function showNextMemoryPhoto(){
   image.className="memory-image";
   image.alt=`Ảnh kỷ niệm ${photo.index+1}`;
   image.src=photo.image.src;
+  fitMemoryFrame(image,photo.image);
   memoryFrame.classList.remove("no-photo");
   memoryFrame.appendChild(image);
 }
@@ -633,7 +643,8 @@ function drawRingPass(g,cx,cy,scale,visible,time,backPass,list){
 let ringLayers=null,ringCap=0,ringLScale=0,ringLVis=-1,ringLTime=-1e9;
 function ensureRingLayers(ringScale,ringVisible,time){
   const px=pixelRatio;
-  if(ringLayers&&ringLayers.px===px&&Math.abs(ringScale-ringLScale)<ringScale*.004&&Math.abs(ringVisible-ringLVis)<.01&&time-ringLTime<20)return;
+  // Giới hạn vẽ lại lớp vành đai ở khoảng 30 lần/giây để tránh khựng khi bắt đầu thu nhỏ.
+  if(ringLayers&&ringLayers.px===px&&time-ringLTime<33)return;
   const baseScale=Math.min(width,height)*(width<=600?.038:.0135)*.5*.45;
   const need=Math.max(Math.ceil(2*54*ringScale),Math.ceil(2*54*baseScale));
   if(!ringLayers||need>ringCap||ringLayers.px!==px){
@@ -992,8 +1003,20 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeWish()});
 resize();
 createParticles(particleCount);createRing(ringCount);createOuterRing(outerRingCount);createSphereDecorations(decorCount);
 rebuildRingOrder();bakeDecor();
+// Dựng sẵn lớp vành đai khi trình duyệt rảnh để tránh khựng lúc bắt đầu chuyển cảnh.
+const warmRingLayers=()=>{
+  if(!width||!height)return;
+  const baseScale=Math.min(width,height)*(width<=600?.038:.0135)*.5*.45;
+  ensureRingLayers(baseScale,1,performance.now());
+};
+if(window.requestIdleCallback)requestIdleCallback(warmRingLayers,{timeout:1200});
+else setTimeout(warmRingLayers,300);
 new ResizeObserver(resize).observe(canvas);
-window.addEventListener("resize",resize);
+window.addEventListener("resize",()=>{
+  resize();
+  const image=memoryFrame.querySelector(".memory-image");
+  if(image)fitMemoryFrame(image,image);
+});
 window.addEventListener("orientationchange",()=>setTimeout(resize,250));
 window.addEventListener("load",resize);
 requestAnimationFrame(draw);
